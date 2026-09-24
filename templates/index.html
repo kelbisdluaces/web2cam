@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Webcams locales</title>
+  <style>
+    :root { color-scheme: dark; font-family: Segoe UI, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: #101820; color: #f2f5f7; }
+    main { width: min(100% - 32px, 960px); margin: 0 auto; padding: 36px 0; }
+    h1 { margin: 0 0 8px; font-size: clamp(1.8rem, 4vw, 3rem); letter-spacing: .02em; }
+    p { color: #aab8c2; margin: 0 0 24px; }
+    .toolbar { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; margin-bottom: 20px; }
+    label { display: grid; gap: 7px; color: #aab8c2; font-size: .9rem; }
+    select, button { border: 1px solid #3b5362; border-radius: 6px; background: #172631; color: #f2f5f7; padding: 11px 14px; font: inherit; }
+    select { min-width: 240px; }
+    button { cursor: pointer; background: #d9f26c; color: #14200e; border-color: #d9f26c; font-weight: 700; }
+    button:disabled { cursor: wait; opacity: .6; }
+    .status { min-height: 22px; color: #d9f26c; }
+    .viewer { overflow: hidden; border: 1px solid #3b5362; border-radius: 8px; background: #070b0e; aspect-ratio: 16 / 9; display: grid; place-items: center; }
+    #video { width: 100%; height: 100%; object-fit: contain; }
+    .empty { padding: 24px; text-align: center; color: #aab8c2; }
+    @media (max-width: 540px) { main { width: min(100% - 20px, 960px); padding-top: 24px; } select, button { width: 100%; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Webcams locales</h1>
+    <p>Selecciona qué cámara quieres transmitir en esta página.</p>
+    <div class="toolbar">
+      <label>Cámara
+        <select id="camera" aria-label="Cámara"></select>
+      </label>
+      <button id="connect" type="button">Transmitir</button>
+    </div>
+    <div id="status" class="status" role="status">Buscando cámaras...</div>
+    <div class="viewer">
+      <img id="video" alt="Transmisión de la cámara seleccionada" hidden>
+      <div id="empty" class="empty">Conecta una cámara para comenzar.</div>
+    </div>
+  </main>
+  <script>
+    const selectorCamara = document.getElementById('camera');
+    const botonConectar = document.getElementById('connect');
+    const estado = document.getElementById('status');
+    const video = document.getElementById('video');
+    const mensajeVacio = document.getElementById('empty');
+
+    async function cargarCamaras() {
+      const respuesta = await fetch('/api/cameras');
+      const camaras = await respuesta.json();
+      selectorCamara.replaceChildren();
+      for (const camara of camaras) {
+        const opcion = document.createElement('option');
+        opcion.value = camara.indice;
+        opcion.textContent = camara.nombre;
+        selectorCamara.append(opcion);
+      }
+      estado.textContent = camaras.length ? 'Elige una cámara y pulsa Transmitir.' : 'No se detectaron cámaras.';
+      botonConectar.disabled = !camaras.length;
+    }
+
+    async function seleccionarCamara() {
+      botonConectar.disabled = true;
+      estado.textContent = 'Conectando...';
+      const respuesta = await fetch('/api/select', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({indice: Number(selectorCamara.value)})
+      });
+      const resultado = await respuesta.json();
+      if (!respuesta.ok) throw new Error(resultado.error || 'No se pudo abrir la cámara.');
+      video.src = '/video_feed?cache=' + Date.now();
+      video.hidden = false;
+      mensajeVacio.hidden = true;
+      estado.textContent = 'Transmitiendo: ' + resultado.nombre;
+      botonConectar.disabled = false;
+    }
+
+    botonConectar.addEventListener('click', () => seleccionarCamara().catch(error => {
+      estado.textContent = error.message;
+      video.hidden = true;
+      mensajeVacio.hidden = false;
+      botonConectar.disabled = false;
+    }));
+    cargarCamaras().catch(() => estado.textContent = 'No se pudo consultar las cámaras.');
+  </script>
+</body>
+</html>
