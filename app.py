@@ -30,7 +30,6 @@ class GestorDeCamaras:
   def camaras_disponibles(self, limite: int = LIMITE_CAMARAS) -> list[InformacionCamara]:
     camaras: list[InformacionCamara] = []
     for indice_camara in range(limite):
-      # DirectShow suele reducir la latencia en Windows frente al backend automático.
       captura = cv2.VideoCapture(indice_camara, cv2.CAP_DSHOW)
       if captura.isOpened():
         camaras.append({"indice": indice_camara, "nombre": f"Cámara {indice_camara + 1}"})
