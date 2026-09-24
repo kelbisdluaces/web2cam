@@ -4,9 +4,9 @@ Aplicación simple para Windows que transmite una webcam en una página local y 
 
 ## Arranque
 
-En PowerShell, desde esta carpeta:
+En un terminal, desde esta carpeta:
 
-```powershell
+```terminal
 py -3.14 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
